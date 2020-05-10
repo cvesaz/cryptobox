@@ -42,6 +42,23 @@ else(OPENSSL_FOUND)
 endif(OPENSSL_FOUND)
 
 #####################
+# Add boost library #
+#####################
+find_package(Boost REQUIRED)
+if(Boost_FOUND)
+# FIXME ${Boost_LIBRARIES} is empty
+if(APPLE)
+	set(INCLUDE_PATHS ${INCLUDE_PATHS} ${Boost_INCLUDE_DIRS})
+	set(LINKING_FLAGS ${LINKING_FLAGS} -L/usr/local/lib -lboost_serialization)
+else(APPLE)
+	set(INCLUDE_PATHS ${INCLUDE_PATHS} ${Boost_INCLUDE_DIRS})
+	set(LINKING_FLAGS ${LINKING_FLAGS} ${Boost_LIBRARIES})
+endif(apple)
+else(Boost_FOUND)
+	message(FATAL_ERROR "boost library not found!!!")
+endif(Boost_FOUND)
+
+#####################
 # Add src directory #
 #####################
 add_subdirectory(src)

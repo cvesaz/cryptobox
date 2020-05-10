@@ -11,15 +11,25 @@
 
 // std
 #include <iostream>
+#include <sstream>
+#include <fstream>
 #include <map>
+#include <stdio.h>
 
 // openssl
 #include <openssl/ec.h>
 #include <openssl/ecdsa.h>
 #include <openssl/obj_mac.h>
 
+// boost
+#include <boost/serialization/map.hpp>
+#include <boost/archive/text_iarchive.hpp>
+#include <boost/archive/text_oarchive.hpp>
+
 // Elliptic curve
 #define EC_CURVE NID_secp256k1
+// Storage file
+#define STORAGE_FILE "storage.txt"
 
 // Typedef
 typedef std::string KeyHandle;
@@ -51,6 +61,10 @@ public:
 private:
   // Get a private key from a given keyHandle
   EC_KEY* getKey(const KeyHandle& keyHandle) const;
+  // Store map of keyHandle to private key into file
+  void storeKeys();
+  // Load map of keyHandle to private key from file
+  void loadKeys();
 };
 
 #endif /* cryptobox_hpp */

@@ -1,13 +1,19 @@
 # cryptobox
 Cryptographic signing box using openSSL to create an elliptic curve key, sign a hash using ECDSA and verify it.
 
-The program handle at 3 operations:
-1. Create any number of new cryptographic secret keys and return their identifier/handle. 
-2. Sign any 32-byte hash given a key identifier/handle.
-3. Verify any signature given the signed hash and a key identifier/handle.
+This program use openSSL to handle the cryptograhic tasks.
 
-The program use openSSL to handle the cryptograhic tasks.
-The chosen elliptic curve is secp256k1.
+This program use a secp256k1 elliptic curve.
+
+This program handle at 6 actions from its command line interface:
+- q : quit
+- c : Create a new cryptographic secret keys and return its handle. 
+- l : List all available key handle in storage map
+- d : Delete a key handle from storage map
+- s : Sign any 32-byte hash given a key handle
+- v : Verify any signature given the signed hash and a key handle.
+
+This program uses Boost serialization to store the keys.
 
 References:
 - Elliptic curve digital signature algorithm
@@ -19,3 +25,10 @@ References:
 - OpenSSL ECDSA
   https://www.openssl.org/docs/man1.0.2/man3/ECDSA_sign.html
   [09.05.2020]
+  https://www.openssl.org/docs/man1.0.2/man3/EC_KEY_generate_key.html
+  [10.05.2020]
+- Boost serialization
+  https://stackoverflow.com/questions/50503571/c-boost-binary-serialization-of-stdmap-containing-pointers-constructed-from
+  [09.05.2020]
+  https://stackoverflow.com/questions/16075953/c-serialize-deserialize-stdmapint-int-from-to-file
+  [10.05.2020]

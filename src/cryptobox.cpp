@@ -11,17 +11,27 @@
 // Constructor
 CryptoBox::CryptoBox() {
   std::cout << "Built a CryptoBox..." << std::endl;
+  
+  // Load stored keys
+  loadKeys();
 }
 
 // Destructor
 // REMARK the memory of private keys generated in createKey() and signatures generated in signHash() have to be free
 CryptoBox::~CryptoBox() {
+  // Store private keys to storage file
+  storeKeys();
+  
+  // Free memory from private keys
   for (const auto& it: handles2eckeys) {
     EC_KEY_free(it.second);
   }
+  
+  // Free memory from signatures
   for (const auto& it : signaturesWallet) {
     ECDSA_SIG_free(it.second);
   }
+  
   std::cout << "Deleted a CryptoBox..." << std::endl;
 }
 
@@ -142,4 +152,68 @@ EC_KEY* CryptoBox::getKey(const KeyHandle& keyHandle) const {
     return nullptr;
   }
   return handles2eckeys.at(keyHandle);
+}
+
+// Store map of keyHandle to private key into file
+void CryptoBox::storeKeys() {
+  // Check if storage is required
+  if (handles2eckeys.size()==0) {
+    std::cout << "No keys to store in file..." << std::endl;
+    return;
+  }
+  
+  // Build Map of keys
+  //FIXME ec_key_st probably contains pointer check how to extract key data and recreate key from data
+#if 1
+  std::cout << "WARNING keys not stored : storeKeys() has to be updated..." << std::endl;
+#else
+  std::map<KeyHandle,EC_KEY> keyMap;
+  for (const auto& it: handles2eckeys) {
+    keyMap.insert(std::pair<KeyHandle,EC_KEY>(it.first,EC_KEY_dup(it.second)));
+  }
+  
+  // Store map
+  std::stringstream ss;
+  boost::archive::text_oarchive oarch(ss);
+  oarch << keyMap;
+  std::ofstream outfile;
+  outfile.open("storage.txt");
+  outfile << ss.str();
+  outfile.close();
+  std::cout << "Private keys stored in file..." << std::endl;
+#endif
+}
+
+// Load map of keyHandle to private key from file
+void CryptoBox::loadKeys() {
+  //FIXME ec_key_st probably contains pointer check how to extract key data and recreate key from data
+  // Load Map of keys
+  std::stringstream ss;
+  std::ifstream infile;
+  infile.open("storage.txt");
+  if (!infile) {
+    std::cout << "No keys to load from file..." << std::endl;
+    return;
+  }
+  ss << infile.rdbuf();
+  infile.close();
+#if 1
+  std::cout << "WARNING keys not loaded : loadKeys() has to be updated..." << std::endl;
+#else
+  boost::archive::text_iarchive iarch(ss);
+  std::map<KeyHandle,EC_KEY> keyMap;
+  iarch >> keyMap;
+  
+  // Assign storage map of keyHandle to private key
+  for (const auto& it: keyMap) {
+    EC_KEY* eckey = EC_KEY_new();
+    EC_KEY_copy(eckey, &it.second);
+    handles2eckeys.insert(std::pair<KeyHandle,EC_KEY*>(it.first,eckey));
+  }
+  
+  // Delete the storage file
+  remove(STORAGE_FILE);
+  std::cout << "Private keys loaded from file: " << std::endl;
+  listKeyHandles();
+#endif
 }

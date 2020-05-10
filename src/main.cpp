@@ -15,15 +15,15 @@
 
 // macros
 #define CIN_HASH            char hash[64]; \
-                            cout << "Enter a hash : "; \
-                            cin >> hash; \
-                            fflush(stdin);
+cout << "Enter a hash : "; \
+cin >> hash; \
+fflush(stdin);
 #define CIN_KEYHANDLE       char keyHandle[32]; \
-                            cout << "Enter a keyHandle : "; \
-                            cin >> keyHandle; \
-                            fflush(stdin);
+cout << "Enter a keyHandle : "; \
+cin >> keyHandle; \
+fflush(stdin);
 #define CIN_HASH_KEYHANDLE  CIN_HASH \
-                            CIN_KEYHANDLE
+CIN_KEYHANDLE
 
 using namespace std;
 
