@@ -113,6 +113,25 @@ bool CryptoBox::verifySignature(const Hash& hash, const KeyHandle& keyHandle) co
   return true;
 }
 
+// List available keyHandles in storage map
+void CryptoBox::listKeyHandles() const {
+  for (const auto& it: handles2eckeys) {
+    std::cout << (it.first) << std::endl;
+  }
+}
+
+// Delete a private key from storage map using keyHandle
+void CryptoBox::deleteKeyHandle(const KeyHandle& keyHandle) {
+  auto it = handles2eckeys.find(keyHandle);
+  if (it==handles2eckeys.end()) {
+    std::cout << "Failed to get key from " << keyHandle << "..." << std::endl;
+    return nullptr;
+  }
+  EC_KEY_free(handles2eckeys.at(keyHandle));
+  handles2eckeys.erase(it);
+  std::cout << "Deleted " << keyHandle << " from storage..." << std::endl;
+}
+
 // Get a private key from a given keyHandle
 // keyHandle: a user given keyHandle
 // return: a pointer to private key

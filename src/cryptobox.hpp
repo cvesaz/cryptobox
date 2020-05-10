@@ -43,6 +43,10 @@ public:
   void signHash(const Hash& hash, const KeyHandle& keyHandle);
   // Verify a signature of a given hash using a given keyHandle
   bool verifySignature(const Hash& hash, const KeyHandle& keyHandle) const;
+  // List available keyHandles in storage map
+  void listKeyHandles() const;
+  // Delete a private key from storage map using keyHandle
+  void deleteKeyHandle(const KeyHandle& keyHandle);
   
 private:
   // Get a private key from a given keyHandle
