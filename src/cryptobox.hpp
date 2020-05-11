@@ -21,11 +21,6 @@
 #include <openssl/ecdsa.h>
 #include <openssl/obj_mac.h>
 
-// boost
-#include <boost/serialization/map.hpp>
-#include <boost/archive/text_iarchive.hpp>
-#include <boost/archive/text_oarchive.hpp>
-
 // Elliptic curve
 #define EC_CURVE NID_secp256k1
 // Storage file

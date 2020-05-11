@@ -53,22 +53,28 @@ void CryptoBox::createKey(const KeyHandle& keyHandle) {
   }
   
   // Generate a new EC Key
+  bool success(true);
   EC_KEY* eckey = EC_KEY_new();
   if (!eckey) {
     std::cout << "Failed to create new EC Key..." << std::endl;
-    return;
+    success = false;
   }
   EC_GROUP* ecgroup = EC_GROUP_new_by_curve_name(EC_CURVE);
   if (!ecgroup) {
     std::cout << "Failed to create new EC Group..." << std::endl;
-    return;
+    success = false;
   }
   if (EC_KEY_set_group(eckey, ecgroup)==0) {
     std::cout << "Failed to set group for EC Key..." << std::endl;
-    return;
+    success = false;
   }
   if (EC_KEY_generate_key(eckey)==0) {
     std::cout << "Failed to generate EC Key..." << std::endl;
+    success = false;
+  }
+  EC_GROUP_free(ecgroup);
+  if (!success) {
+    EC_KEY_free(eckey);
     return;
   }
   
@@ -87,9 +93,10 @@ void CryptoBox::signHash(const Hash& hash, const KeyHandle& keyHandle) {
   if (!eckey) return;
   
   // Sigh hash using EC Key from keyHandle
-  auto signature = ECDSA_do_sign((const unsigned char*)hash.c_str(), (int)hash.size(), eckey);
+  ECDSA_SIG* signature = ECDSA_do_sign((const unsigned char*)hash.c_str(), (int)hash.size(), eckey);
   if (!signature) {
     std::cout << "Failed to generate EC Signature..." << std::endl;
+    ECDSA_SIG_free(signature);
     return;
   }
   
@@ -162,58 +169,101 @@ void CryptoBox::storeKeys() {
     return;
   }
   
-  // Build Map of keys
-  //FIXME ec_key_st probably contains pointer check how to extract key data and recreate key from data
-#if 1
-  std::cout << "WARNING keys not stored : storeKeys() has to be updated..." << std::endl;
-#else
-  std::map<KeyHandle,EC_KEY> keyMap;
+  // Build stream of key data
+  std::stringstream ss;
   for (const auto& it: handles2eckeys) {
-    keyMap.insert(std::pair<KeyHandle,EC_KEY>(it.first,EC_KEY_dup(it.second)));
+    bool success(true);
+    ss << it.first << " ";
+    EC_GROUP *ecgroup = EC_GROUP_new_by_curve_name(EC_CURVE);
+    if (!ecgroup) {
+      std::cout << "Failed to create new EC Group..." << std::endl;
+      success = false;
+    }
+    BIGNUM *x = BN_new();
+    BIGNUM *y = BN_new();
+    if (EC_POINT_get_affine_coordinates(ecgroup, EC_KEY_get0_public_key(it.second), x, y, NULL)==0) {
+      std::cout << "Failed to get ecpoint..." << std::endl;
+      success = false;
+    }
+    std::string x_str = BN_bn2hex(x);
+    ss << x_str << " ";
+    std::string y_str = BN_bn2hex(y);
+    ss << y_str << " ";
+    std::string p_str = BN_bn2hex(EC_KEY_get0_private_key(it.second));
+    ss << p_str << std::endl;
+    BN_free(y);
+    BN_free(x);
+    EC_GROUP_free(ecgroup);
+    if (!success) return;
   }
   
   // Store map
-  std::stringstream ss;
-  boost::archive::text_oarchive oarch(ss);
-  oarch << keyMap;
   std::ofstream outfile;
-  outfile.open("storage.txt");
+  outfile.open(STORAGE_FILE);
   outfile << ss.str();
   outfile.close();
   std::cout << "Private keys stored in file..." << std::endl;
-#endif
 }
 
 // Load map of keyHandle to private key from file
 void CryptoBox::loadKeys() {
-  //FIXME ec_key_st probably contains pointer check how to extract key data and recreate key from data
-  // Load Map of keys
+  // Load storage file
   std::stringstream ss;
   std::ifstream infile;
-  infile.open("storage.txt");
+  infile.open(STORAGE_FILE);
   if (!infile) {
     std::cout << "No keys to load from file..." << std::endl;
     return;
   }
   ss << infile.rdbuf();
   infile.close();
-#if 1
-  std::cout << "WARNING keys not loaded : loadKeys() has to be updated..." << std::endl;
-#else
-  boost::archive::text_iarchive iarch(ss);
-  std::map<KeyHandle,EC_KEY> keyMap;
-  iarch >> keyMap;
-  
-  // Assign storage map of keyHandle to private key
-  for (const auto& it: keyMap) {
+
+  // Create EC key from key data
+  KeyHandle keyHandle;
+  while (ss >> keyHandle) {
+    bool success(true);
+    std::string x_str, y_str, p_str;
+    ss >> x_str >> y_str >> p_str;
+    BIGNUM *x = BN_new();
+    BIGNUM *y = BN_new();
+    BIGNUM *p = BN_new();
+    BN_hex2bn(&x, x_str.c_str());
+    BN_hex2bn(&y, y_str.c_str());
+    BN_hex2bn(&p, p_str.c_str());
     EC_KEY* eckey = EC_KEY_new();
-    EC_KEY_copy(eckey, &it.second);
-    handles2eckeys.insert(std::pair<KeyHandle,EC_KEY*>(it.first,eckey));
+    EC_GROUP* ecgroup = EC_GROUP_new_by_curve_name(EC_CURVE);
+    if (!ecgroup) {
+      std::cout << "Failed to create new EC Group..." << std::endl;
+      success = false;
+    }
+    if (EC_KEY_set_group(eckey, ecgroup)==0) {
+      std::cout << "Failed to set group for EC Key..." << std::endl;
+      success = false;
+    }
+    EC_POINT* ecpoint = EC_POINT_new(ecgroup);
+    if (EC_POINT_set_affine_coordinates(ecgroup, ecpoint, x, y, NULL)==0) {
+      std::cout << "Failed to set ecpoint..." << std::endl;
+      success = false;
+    }
+    if (EC_KEY_set_public_key(eckey, ecpoint)==0) {
+      std::cout << "Failed to set public key..." << std::endl;
+      success = false;
+    }
+    if (EC_KEY_set_private_key(eckey, p)==0) {
+      std::cout << "Failed to set private key..." << std::endl;
+      success = false;
+    }
+    EC_POINT_free(ecpoint);
+    EC_GROUP_free(ecgroup);
+    BN_free(p);
+    BN_free(y);
+    BN_free(x);
+    if (!success) return;
+    handles2eckeys[keyHandle] = eckey;
   }
   
   // Delete the storage file
   remove(STORAGE_FILE);
   std::cout << "Private keys loaded from file: " << std::endl;
   listKeyHandles();
-#endif
 }
